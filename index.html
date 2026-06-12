@@ -365,6 +365,18 @@
                     }
                 });
             }
+
+            // Keyboard navigation (ArrowLeft -> Prev Day, ArrowRight -> Next Day)
+            window.addEventListener('keydown', (e) => {
+                if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                    return;
+                }
+                if (e.key === 'ArrowLeft') {
+                    prevDay();
+                } else if (e.key === 'ArrowRight') {
+                    nextDay();
+                }
+            });
         });
 
         // Initialize metadata from API
