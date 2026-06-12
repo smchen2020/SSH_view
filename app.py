@@ -64,6 +64,20 @@ class SSHDataManager:
         
         self.load_data()
         self.load_coastlines()
+        self.mooring_file = os.path.join(base_dir, "Data", "mooring_time_depth.npz")
+        self.mooring_data = None
+        self.load_mooring()
+
+    def load_mooring(self):
+        if os.path.exists(self.mooring_file):
+            print(f"Loading mooring data from {self.mooring_file}")
+            try:
+                self.mooring_data = np.load(self.mooring_file)
+                print("Successfully loaded mooring data.")
+            except Exception as e:
+                print(f"Error loading mooring npz file: {e}")
+        else:
+            print(f"Mooring npz file not found at {self.mooring_file}")
 
     def load_data(self):
         print("Loading netCDF datasets...")
@@ -332,6 +346,34 @@ def get_slice(
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/mooring")
+def get_mooring_data():
+    if not data_manager or data_manager.mooring_data is None:
+        raise HTTPException(status_code=500, detail="Mooring data not initialized.")
+    
+    res = {}
+    for key in ['ckm1', 'ckm6', 'ckm3']:
+        t_key = f"t_{key}"
+        dep_key = f"deps_{key}"
+        v_key = f"v_{key}"
+        
+        if t_key in data_manager.mooring_data and dep_key in data_manager.mooring_data and v_key in data_manager.mooring_data:
+            t_data = data_manager.mooring_data[t_key]
+            t_list = [pd.to_datetime(t).strftime("%Y-%m-%d") for t in t_data]
+            
+            dep_data = data_manager.mooring_data[dep_key]
+            dep_list = (-dep_data).tolist()
+            
+            v_data = data_manager.mooring_data[v_key]
+            
+            res[key] = {
+                "t": t_list,
+                "deps": dep_list,
+                "v": sanitize_array(v_data)
+            }
+            
+    return JSONResponse(content=res)
 
 if __name__ == "__main__":
     import uvicorn
