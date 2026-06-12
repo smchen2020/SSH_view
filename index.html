@@ -86,7 +86,7 @@
                 <!-- Styled Options Checkboxes -->
                 <div class="flex flex-col gap-3 pt-1">
                     <label class="flex items-center gap-3 cursor-pointer group">
-                        <input type="checkbox" id="chk-lock-scale" onchange="toggleLockScale()" class="hidden peer">
+                        <input type="checkbox" id="chk-lock-scale" checked onchange="toggleLockScale()" class="hidden peer">
                         <div class="w-5 h-5 bg-[#0f172a] border border-slate-700 peer-checked:bg-blue-500 peer-checked:border-blue-500 rounded-md flex items-center justify-center transition-all group-hover:border-slate-500">
                             <svg class="w-3.5 h-3.5 text-white scale-0 peer-checked:scale-100 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -303,7 +303,7 @@
         let bounds = { lon_min: 118, lon_max: 126, lat_min: 19, lat_max: 27 };
         
         let currentIndex = 0;
-        let lockScale = false;
+        let lockScale = true;
         let showCurrent = true;
         let showStations = true;
         
