@@ -1235,12 +1235,27 @@
 
             const currentDate = (dates && dates[currentIndex]) ? dates[currentIndex] : data.t[0];
 
+            const isInside = currentDate >= data.t[0] && currentDate <= data.t[data.t.length - 1];
+            const shapesList = isInside ? [{
+                type: 'line',
+                x0: currentDate,
+                x1: currentDate,
+                y0: 0,
+                y1: -600,
+                line: {
+                    color: '#facc15',
+                    width: 2.0,
+                    dash: 'dashdot'
+                }
+            }] : [];
+
             const layout = {
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: '#0f172a',
                 margin: { l: 45, r: 10, t: 15, b: 35 },
                 xaxis: {
                     type: 'date',
+                    range: [data.t[0], data.t[data.t.length - 1]],
                     tickfont: { color: '#94a3b8', family: 'Outfit', size: 9 },
                     gridcolor: '#1e293b',
                     linecolor: '#334155'
@@ -1254,18 +1269,7 @@
                 },
                 showlegend: false,
                 autosize: true,
-                shapes: [{
-                    type: 'line',
-                    x0: currentDate,
-                    x1: currentDate,
-                    y0: 0,
-                    y1: -600,
-                    line: {
-                        color: '#facc15',
-                        width: 2.0,
-                        dash: 'dashdot'
-                    }
-                }]
+                shapes: shapesList
             };
 
             const config = {
@@ -1279,11 +1283,17 @@
         // Fast update of the vertical indicators via relayout
         function updateMooringIndicator(dateStr) {
             const mooringCharts = ['plotly-mooring-ckm1', 'plotly-mooring-ckm6', 'plotly-mooring-ckm3'];
-            mooringCharts.forEach(id => {
+            const mooringKeys = ['ckm1', 'ckm6', 'ckm3'];
+            
+            mooringCharts.forEach((id, idx) => {
                 const gd = document.getElementById(id);
                 if (gd && gd.layout) {
-                    const update = {
-                        shapes: [{
+                    const key = mooringKeys[idx];
+                    const data = mooringData ? mooringData[key] : null;
+                    
+                    let shapesList = [];
+                    if (data && dateStr >= data.t[0] && dateStr <= data.t[data.t.length - 1]) {
+                        shapesList = [{
                             type: 'line',
                             x0: dateStr,
                             x1: dateStr,
@@ -1294,7 +1304,11 @@
                                 width: 2.0,
                                 dash: 'dashdot'
                             }
-                        }]
+                        }];
+                    }
+                    
+                    const update = {
+                        shapes: shapesList
                     };
                     Plotly.relayout(gd, update);
                 }
