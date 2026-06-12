@@ -78,10 +78,9 @@
                     <span>🎨</span> 1. Variable & Display Style
                 </h2>
                 
-                <!-- Toggle switches -->
-                <div class="grid grid-cols-2 gap-2 bg-[#0f172a] p-1 rounded-xl border border-slate-800/50">
-                    <button id="btn-var-sla" onclick="setVariable('sla')" class="py-2 text-xs font-bold rounded-lg transition-all duration-200 bg-blue-600 text-white shadow-md shadow-blue-500/10">SLA</button>
-                    <button id="btn-var-adt" onclick="setVariable('adt')" class="py-2 text-xs font-bold rounded-lg transition-all duration-200 text-slate-400 hover:text-white">ADT</button>
+                <!-- SLA & ADT Info Banner -->
+                <div class="text-[11px] text-slate-300 font-bold bg-[#0f172a] py-2 px-3 rounded-xl border border-slate-800/80 text-center tracking-wide">
+                    🔄 Displaying SLA & ADT Simultaneously
                 </div>
 
                 <!-- Styled Options Checkboxes -->
@@ -260,67 +259,61 @@
                     </div>
                 </div>
 
-                <!-- Main Plot Workspace -->
-                <div class="flex-1 flex flex-row gap-3 min-h-0 w-full overflow-hidden">
+                <!-- Main Plot Workspace (Horizontal Split) -->
+                <div class="flex-1 flex flex-col md:flex-row gap-4 min-h-0 w-full overflow-hidden">
                     
-                    <!-- Vertical Stats Panel (Left) -->
-                    <div class="w-28 shrink-0 flex flex-col justify-center gap-2 bg-[#0f172a]/60 border border-slate-800/80 rounded-xl p-2.5 self-center">
-                        <div class="text-[9px] text-cyan-400 font-bold uppercase tracking-wider border-b border-slate-850 pb-1 mb-1 text-center">Stats</div>
-                        
-                        <div class="flex flex-col gap-0.5 border-b border-slate-900/50 pb-1.5">
-                            <span class="text-[8px] text-slate-500 uppercase font-bold">Min</span>
-                            <span class="text-xs font-extrabold text-blue-400" id="stat-min">-- m</span>
+                    <!-- Left: SLA Map Container -->
+                    <div class="flex-1 h-full flex flex-col gap-2 min-w-0 bg-[#0f172a]/20 border border-slate-800/50 p-3 rounded-2xl relative">
+                        <div class="flex justify-between items-center px-1">
+                            <span class="text-xs font-bold text-blue-400 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Sea Level Anomaly (SLA)
+                            </span>
+                            <span class="text-[9px] font-semibold font-mono text-slate-400" id="stats-sla">Min: -- | Max: -- | Mean: -- | Std: --</span>
                         </div>
-                        
-                        <div class="flex flex-col gap-0.5 border-b border-slate-900/50 pb-1.5">
-                            <span class="text-[8px] text-slate-500 uppercase font-bold">Max</span>
-                            <span class="text-xs font-extrabold text-emerald-400" id="stat-max">-- m</span>
-                        </div>
-                        
-                        <div class="flex flex-col gap-0.5 border-b border-slate-900/50 pb-1.5">
-                            <span class="text-[8px] text-slate-500 uppercase font-bold">Mean</span>
-                            <span class="text-xs font-extrabold text-yellow-400" id="stat-mean">-- m</span>
-                        </div>
-                        
-                        <div class="flex flex-col gap-0.5">
-                            <span class="text-[8px] text-slate-500 uppercase font-bold">Std Dev</span>
-                            <span class="text-xs font-extrabold text-fuchsia-400" id="stat-std">-- m</span>
+                        <div class="flex-1 h-full rounded-xl overflow-hidden relative" id="plot-wrapper-sla">
+                            <!-- Plotly target SLA -->
+                            <div id="plotly-chart-sla" class="w-full h-full"></div>
+                            <!-- Transparent Canvas for Particle flow overlay SLA -->
+                            <canvas id="particle-canvas-sla" class="absolute pointer-events-none rounded-xl z-10" style="top: 0; left: 0; display: none; z-index: 10;"></canvas>
                         </div>
                     </div>
 
-                    <!-- Plot container (Right) -->
-                    <div class="flex-1 h-full rounded-xl overflow-hidden relative" id="plot-wrapper">
-                        <!-- Plotly target -->
-                        <div id="plotly-chart" class="w-full h-full"></div>
-                        <!-- Transparent Canvas for Particle flow overlay -->
-                        <canvas id="particle-canvas" class="absolute pointer-events-none rounded-xl z-10" style="top: 0; left: 0; display: none; z-index: 10;"></canvas>
+                    <!-- Right: ADT Map Container -->
+                    <div class="flex-1 h-full flex flex-col gap-2 min-w-0 bg-[#0f172a]/20 border border-slate-800/50 p-3 rounded-2xl relative">
+                        <div class="flex justify-between items-center px-1">
+                            <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Absolute Dynamic Topography (ADT)
+                            </span>
+                            <span class="text-[9px] font-semibold font-mono text-slate-400" id="stats-adt">Min: -- | Max: -- | Mean: -- | Std: --</span>
+                        </div>
+                        <div class="flex-1 h-full rounded-xl overflow-hidden relative" id="plot-wrapper-adt">
+                            <!-- Plotly target ADT -->
+                            <div id="plotly-chart-adt" class="w-full h-full"></div>
+                            <!-- Transparent Canvas for Particle flow overlay ADT -->
+                            <canvas id="particle-canvas-adt" class="absolute pointer-events-none rounded-xl z-10" style="top: 0; left: 0; display: none; z-index: 10;"></canvas>
+                        </div>
                     </div>
 
                 </div>
 
-        </main>
-
-    </div>
-
     <!-- Script Block -->
-    <script>
-        // Global variables state
-        let dates = [];
+    <script>        let dates = [];
         let stations = [];
         let limits = { sla: [-1, 1], adt: [-1, 1] };
         let bounds = { lon_min: 118, lon_max: 126, lat_min: 19, lat_max: 27 };
         
         let currentIndex = 0;
-        let currentVariable = 'sla';
         let lockScale = false;
         let showCurrent = true;
         let showStations = true;
         
         // Particle system simulation state
-        let currentData = null;
+        let currentSlaData = null;
+        let currentAdtData = null;
         let currentsStyle = 'arrows'; // 'arrows' or 'particles'
         let particleAnimationId = null;
-        let particles = [];
+        let particlesSla = [];
+        let particlesAdt = [];
         const MAX_PARTICLES = 1200;
         
         class Particle {
@@ -351,20 +344,68 @@
             await fetchInitMetadata();
             await fetchSlice();
             
-            // Explicitly prevent any mouse wheel scroll inside the chart to keep the view perfectly stable
-            const chartEl = document.getElementById('plotly-chart');
-            if (chartEl) {
-                chartEl.addEventListener('wheel', function(e) {
-                    e.preventDefault();
-                }, { passive: false });
-
-                // Synchronize particle system canvas when zooming or panning map
-                chartEl.on('plotly_relayout', function(eventdata) {
-                    if (showCurrent && currentsStyle === 'particles') {
-                        setTimeout(startParticleAnimation, 50);
-                    }
-                });
+            // Explicitly prevent any mouse wheel scroll inside the charts and synchronize pan/zoom
+            const chartSla = document.getElementById('plotly-chart-sla');
+            const chartAdt = document.getElementById('plotly-chart-adt');
+            
+            let isSyncing = false;
+            
+            function syncLayout(src, dest, eventdata) {
+                if (isSyncing) return;
+                isSyncing = true;
+                
+                const update = {};
+                if (eventdata['xaxis.range[0]'] !== undefined) {
+                    update['xaxis.range'] = [eventdata['xaxis.range[0]'], eventdata['xaxis.range[1]']];
+                }
+                if (eventdata['yaxis.range[0]'] !== undefined) {
+                    update['yaxis.range'] = [eventdata['yaxis.range[0]'], eventdata['yaxis.range[1]']];
+                }
+                if (eventdata['xaxis.autorange'] !== undefined) {
+                    update['xaxis.autorange'] = eventdata['xaxis.autorange'];
+                }
+                if (eventdata['yaxis.autorange'] !== undefined) {
+                    update['yaxis.autorange'] = eventdata['yaxis.autorange'];
+                }
+                
+                if (Object.keys(update).length > 0) {
+                    Plotly.relayout(dest, update).then(() => {
+                        isSyncing = false;
+                        if (showCurrent && currentsStyle === 'particles') {
+                            setTimeout(startParticleAnimation, 50);
+                        }
+                    });
+                } else {
+                    isSyncing = false;
+                }
             }
+
+            [chartSla, chartAdt].forEach((chart, idx) => {
+                if (chart) {
+                    chart.addEventListener('wheel', function(e) {
+                        e.preventDefault();
+                    }, { passive: false });
+                    
+                    chart.on('plotly_relayout', function(eventdata) {
+                        const target = idx === 0 ? chartAdt : chartSla;
+                        syncLayout(chart, target, eventdata);
+                        
+                        // Crop trigger based on new zoom coordinates
+                        if (eventdata['xaxis.range[0]'] !== undefined && eventdata['yaxis.range[0]'] !== undefined) {
+                            bounds.lon_min = parseFloat(eventdata['xaxis.range[0]']);
+                            bounds.lon_max = parseFloat(eventdata['xaxis.range[1]']);
+                            bounds.lat_min = parseFloat(eventdata['yaxis.range[0]']);
+                            bounds.lat_max = parseFloat(eventdata['yaxis.range[1]']);
+                            
+                            // Synchronize the sidebar inputs
+                            document.getElementById('bounds-lon-min').value = bounds.lon_min.toFixed(3);
+                            document.getElementById('bounds-lon-max').value = bounds.lon_max.toFixed(3);
+                            document.getElementById('bounds-lat-min').value = bounds.lat_min.toFixed(3);
+                            document.getElementById('bounds-lat-max').value = bounds.lat_max.toFixed(3);
+                        }
+                    });
+                }
+            });
 
             // Keyboard navigation (ArrowLeft -> Prev Day, ArrowRight -> Next Day)
             window.addEventListener('keydown', (e) => {
@@ -425,48 +466,64 @@
 
             } catch (err) {
                 console.error("Initialization error:", err);
-                document.getElementById('status-pill').textContent = "Connection Error";
-                document.getElementById('status-pill').classList.replace('text-emerald-400', 'text-rose-400');
             }
             showLoading(false);
         }
 
-        // Fetch dynamic slice from FastAPI
+        // Fetch dynamic slices for both SLA and ADT concurrently from FastAPI
         async function fetchSlice() {
             showLoading(true);
             try {
-                let url = `/api/slice?index=${currentIndex}&var_name=${currentVariable}`;
+                let urlSla = `/api/slice?index=${currentIndex}&var_name=sla`;
+                let urlAdt = `/api/slice?index=${currentIndex}&var_name=adt`;
                 
                 // Add boundaries parameters
-                url += `&lon_min=${bounds.lon_min}&lon_max=${bounds.lon_max}&lat_min=${bounds.lat_min}&lat_max=${bounds.lat_max}`;
+                const boundQuery = `&lon_min=${bounds.lon_min}&lon_max=${bounds.lon_max}&lat_min=${bounds.lat_min}&lat_max=${bounds.lat_max}`;
+                urlSla += boundQuery;
+                urlAdt += boundQuery;
                 
                 // Add average dates if in average mode
                 if (averageMode && avgStart && avgEnd) {
-                    url += `&avg_start=${avgStart}&avg_end=${avgEnd}`;
+                    const avgQuery = `&avg_start=${avgStart}&avg_end=${avgEnd}`;
+                    urlSla += avgQuery;
+                    urlAdt += avgQuery;
                 }
 
-                const res = await fetch(url);
-                if (!res.ok) throw new Error("Data fetch error");
-                const data = await res.json();
+                // Fetch both datasets in parallel
+                const [resSla, resAdt] = await Promise.all([
+                    fetch(urlSla),
+                    fetch(urlAdt)
+                ]);
+
+                if (!resSla.ok || !resAdt.ok) throw new Error("Data fetch error");
+                const [dataSla, dataAdt] = await Promise.all([
+                    resSla.json(),
+                    resAdt.json()
+                ]);
 
                 // Update date title and timeline views
-                document.getElementById('title-date-label').textContent = averageMode ? data.date : `Date: ${data.date}`;
+                document.getElementById('title-date-label').textContent = averageMode ? dataSla.date : `Date: ${dataSla.date}`;
                 if (!averageMode) {
-                    document.getElementById('date-input').value = data.date;
+                    document.getElementById('date-input').value = dataSla.date;
                     document.getElementById('time-slider').value = currentIndex;
                     document.getElementById('slider-index-lbl').textContent = `Day ${currentIndex}`;
                 }
 
-                // Update Stats Banner
-                document.getElementById('stat-min').textContent = `${data.stats.min.toFixed(3)} m`;
-                document.getElementById('stat-max').textContent = `${data.stats.max.toFixed(3)} m`;
-                document.getElementById('stat-mean').textContent = `${data.stats.mean.toFixed(3)} m`;
-                document.getElementById('stat-std').textContent = `${data.stats.std.toFixed(3)} m`;
-
-                // Render Map Plot using Plotly
-                renderPlot(data);
+                // Update SLA Stats Banner
+                document.getElementById('stats-sla').textContent = 
+                    `Min: ${dataSla.stats.min.toFixed(3)} | Max: ${dataSla.stats.max.toFixed(3)} | Mean: ${dataSla.stats.mean.toFixed(3)} | Std: ${dataSla.stats.std.toFixed(3)}`;
                 
-                currentData = data;
+                // Update ADT Stats Banner
+                document.getElementById('stats-adt').textContent = 
+                    `Min: ${dataAdt.stats.min.toFixed(3)} | Max: ${dataAdt.stats.max.toFixed(3)} | Mean: ${dataAdt.stats.mean.toFixed(3)} | Std: ${dataAdt.stats.std.toFixed(3)}`;
+
+                // Render Map Plots using Plotly
+                renderPlot('sla', dataSla);
+                renderPlot('adt', dataAdt);
+                
+                currentSlaData = dataSla;
+                currentAdtData = dataAdt;
+                
                 if (showCurrent && currentsStyle === 'particles') {
                     setTimeout(startParticleAnimation, 150);
                 } else {
@@ -480,17 +537,17 @@
         }
 
         // Render fully interactive map using Plotly.js
-        function renderPlot(data) {
+        function renderPlot(variable, data) {
             const traces = [];
 
             // 1. Contours of Sea surface height
-            let colorScaleName = currentVariable === 'sla' ? 'RdBu' : 'Jet';
+            let colorScaleName = variable === 'sla' ? 'RdBu' : 'Jet';
             let colorScaleLimits = {};
 
             if (lockScale) {
                 // Lock global maximums & minimums
-                const globalLims = limits[currentVariable];
-                if (currentVariable === 'sla') {
+                const globalLims = limits[variable];
+                if (variable === 'sla') {
                     // Force symmetric color scale for SLA anomaly
                     const limit = Math.max(Math.abs(globalLims[0]), Math.abs(globalLims[1]));
                     colorScaleLimits = { zmin: -limit, zmax: limit };
@@ -498,7 +555,7 @@
                     colorScaleLimits = { zmin: globalLims[0], zmax: globalLims[1] };
                 }
             } else {
-                if (currentVariable === 'sla') {
+                if (variable === 'sla') {
                     const limit = Math.max(Math.abs(data.stats.min), Math.abs(data.stats.max));
                     colorScaleLimits = { zmin: -limit, zmax: limit };
                 } else {
@@ -519,7 +576,7 @@
                 zmax: colorScaleLimits.zmax,
                 colorbar: {
                     title: {
-                        text: currentVariable === 'sla' ? 'SLA (m)' : 'ADT (m)',
+                        text: variable === 'sla' ? 'SLA (m)' : 'ADT (m)',
                         font: { color: '#94a3b8', size: 11, family: 'Outfit' }
                     },
                     tickfont: { color: '#94a3b8', size: 10, family: 'Outfit' },
@@ -535,14 +592,9 @@
 
             // 2. Geostrophic current vector lines (quiver)
             if (showCurrent && data.u && data.v && currentsStyle === 'arrows') {
-                // To keep plot readable and high-performance, we construct quiver arrow shafts in Javascript
                 const arrowXs = [];
                 const arrowYs = [];
-                
-                // Scale factor for velocity arrows to be visible
                 const scale = 0.65; 
-                
-                // Step for grid sub-sampling to keep arrow density clean
                 const step = 1; 
 
                 for (let i = 0; i < data.lat.length; i += step) {
@@ -561,9 +613,8 @@
                         arrowXs.push(startX, endX, null);
                         arrowYs.push(startY, endY, null);
 
-                        // Arrow head lines (optional, retrofitted backward angles)
                         const angle = Math.atan2(vVal, uVal);
-                        const arrowSize = 0.05; // length of arrowhead
+                        const arrowSize = 0.05; 
                         
                         const head1X = endX - arrowSize * Math.cos(angle - Math.PI / 6);
                         const head1Y = endY - arrowSize * Math.sin(angle - Math.PI / 6);
@@ -592,17 +643,17 @@
                 traces.push(currentTrace);
             }
 
-            // 3. High-resolution vector coastlines - Renders as mathematically smooth closed polygons on top!
+            // 3. Vector coastlines
             if (data.coastlines && data.coastlines.length > 0) {
-                data.coastlines.forEach((poly, index) => {
+                data.coastlines.forEach((poly) => {
                     const polyTrace = {
                         x: poly.lon,
                         y: poly.lat,
                         mode: 'lines',
                         fill: 'toself',
-                        fillcolor: '#475569', // Sophisticated slightly lighter slate gray for land
+                        fillcolor: '#475569',
                         line: {
-                            color: '#334155', // Sub-pixel clean outline in slightly darker slate
+                            color: '#334155',
                             width: 1.0
                         },
                         name: 'Land',
@@ -613,7 +664,7 @@
                 });
             }
 
-            // 4. Stations overlay - Always sits on top of land
+            // 4. Stations overlay
             if (showStations && stations.length > 0) {
                 const stationXs = stations.map(s => s[1]);
                 const stationYs = stations.map(s => s[2]);
@@ -640,25 +691,25 @@
             // Build Layout options
             const layout = {
                 paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: '#ffffff', // Set missing data area background to clean white
+                plot_bgcolor: '#ffffff',
                 margin: { l: 30, r: 10, t: 15, b: 30 },
                 xaxis: {
                     title: { text: 'Longitude (°E)', font: { color: '#94a3b8', family: 'Outfit', size: 11 } },
                     tickfont: { color: '#94a3b8', family: 'Outfit', size: 10 },
-                    gridcolor: '#e2e8f0', // Elegant light grid lines
-                    linecolor: '#cbd5e1', // Light slate borders
+                    gridcolor: '#e2e8f0',
+                    linecolor: '#cbd5e1',
                     zeroline: false,
-                    scaleanchor: 'y', // Lock 1:1 aspect ratio! Essential for geographic accuracy!
+                    scaleanchor: 'y',
                     scaleratio: 1,
-                    constrain: 'domain', // CRITICAL: Stop axis ranges from expanding and keep grid bounds locked!
+                    constrain: 'domain',
                     constraintoward: 'center',
                     range: [bounds.lon_min, bounds.lon_max]
                 },
                 yaxis: {
                     title: { text: 'Latitude (°N)', font: { color: '#94a3b8', family: 'Outfit', size: 11 } },
                     tickfont: { color: '#94a3b8', family: 'Outfit', size: 10 },
-                    gridcolor: '#e2e8f0', // Elegant light grid lines
-                    linecolor: '#cbd5e1', // Light slate borders
+                    gridcolor: '#e2e8f0',
+                    linecolor: '#cbd5e1',
                     zeroline: false,
                     range: [bounds.lat_min, bounds.lat_max]
                 },
@@ -673,39 +724,13 @@
                 displaylogo: false
             };
 
-            Plotly.newPlot('plotly-chart', traces, layout, config);
-        }
-
-        // Toggle variables
-        function setVariable(variable) {
-            if (currentVariable === variable) return;
-            currentVariable = variable;
-            
-            const btnSla = document.getElementById('btn-var-sla');
-            const btnAdt = document.getElementById('btn-var-adt');
-
-            if (variable === 'sla') {
-                btnSla.className = "py-2 text-xs font-bold rounded-lg transition-all duration-200 bg-blue-600 text-white shadow-md shadow-blue-500/10";
-                btnAdt.className = "py-2 text-xs font-bold rounded-lg transition-all duration-200 text-slate-400 hover:text-white";
-                document.getElementById('title-variable-name').textContent = "Sea Level Anomaly (SLA)";
-                document.getElementById('title-lbl-icon').textContent = "🌊";
-            } else {
-                btnAdt.className = "py-2 text-xs font-bold rounded-lg transition-all duration-200 bg-blue-600 text-white shadow-md shadow-blue-500/10";
-                btnSla.className = "py-2 text-xs font-bold rounded-lg transition-all duration-200 text-slate-400 hover:text-white";
-                document.getElementById('title-variable-name').textContent = "Absolute Dynamic Topography (ADT)";
-                document.getElementById('title-lbl-icon').textContent = "🏔️";
-            }
-            fetchSlice();
+            const targetDivId = variable === 'sla' ? 'plotly-chart-sla' : 'plotly-chart-adt';
+            Plotly.newPlot(targetDivId, traces, layout, config);
         }
 
         // Controls interactions
         function toggleLockScale() {
             lockScale = document.getElementById('chk-lock-scale').checked;
-            fetchSlice();
-        }
-
-        function toggleShowCurrent() {
-            showCurrent = document.getElementById('chk-show-current').checked;
             fetchSlice();
         }
 
@@ -741,6 +766,7 @@
             }
         }
 
+        // Keyboard triggering
         function nextDay() {
             if (currentIndex < dates.length - 1) {
                 currentIndex++;
@@ -765,7 +791,7 @@
                     if (currentIndex < dates.length - 1) {
                         currentIndex++;
                     } else {
-                        currentIndex = 0; // wrap around
+                        currentIndex = 0;
                     }
                     fetchSlice();
                 }, playSpeed);
@@ -781,7 +807,6 @@
             playSpeed = parseInt(val);
             document.getElementById('speed-lbl').textContent = `${playSpeed}ms`;
             if (isPlaying) {
-                // Re-initialize interval with new speed
                 togglePlay();
                 togglePlay();
             }
@@ -801,9 +826,7 @@
             avgEnd = end;
             averageMode = true;
             
-            // Stop playing if running
             if (isPlaying) togglePlay();
-            
             fetchSlice();
         }
 
@@ -862,18 +885,17 @@
                 btnParticles.classList.remove('text-slate-400', 'hover:text-white');
                 btnArrows.classList.remove('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-500/10');
                 btnArrows.classList.add('text-slate-400', 'hover:text-white');
-                fetchSlice(); // Clear Plotly arrows first
+                fetchSlice(); 
             }
         }
 
-        // Bilinear interpolation for particle geostrophic velocity (handles ascending and descending coordinate axes)
-        function getVelocityAt(lon, lat) {
-            if (!currentData || !currentData.u || !currentData.v) return null;
+        // Bilinear interpolation for particle geostrophic velocity
+        function getVelocityAt(data, lon, lat) {
+            if (!data || !data.u || !data.v) return null;
             
-            const lons = currentData.lon;
-            const lats = currentData.lat;
+            const lons = data.lon;
+            const lats = data.lat;
             
-            // Find grid cell indices (robust to both ascending & descending coordinate arrays)
             let i = -1;
             for (let r = 0; r < lats.length - 1; r++) {
                 const latMinVal = Math.min(lats[r], lats[r+1]);
@@ -903,15 +925,15 @@
             const tx = (lon - lon0) / (lon1 - lon0);
             const ty = (lat - lat0) / (lat1 - lat0);
             
-            const u00 = currentData.u[i][j];
-            const u01 = currentData.u[i][j+1];
-            const u10 = currentData.u[i+1][j];
-            const u11 = currentData.u[i+1][j+1];
+            const u00 = data.u[i][j];
+            const u01 = data.u[i][j+1];
+            const u10 = data.u[i+1][j];
+            const u11 = data.u[i+1][j+1];
             
-            const v00 = currentData.v[i][j];
-            const v01 = currentData.v[i][j+1];
-            const v10 = currentData.v[i+1][j];
-            const v11 = currentData.v[i+1][j+1];
+            const v00 = data.v[i][j];
+            const v01 = data.v[i][j+1];
+            const v10 = data.v[i+1][j];
+            const v11 = data.v[i+1][j+1];
             
             if (u00 === null || u01 === null || u10 === null || u11 === null) return null;
             if (v00 === null || v01 === null || v10 === null || v11 === null) return null;
@@ -922,24 +944,26 @@
             return { u, v };
         }
 
-        // Start dynamic particle animation loop
+        // Start dynamic particle animation loop on both SLA and ADT plots
         function startParticleAnimation() {
             if (particleAnimationId) {
                 cancelAnimationFrame(particleAnimationId);
             }
             
-            const canvas = document.getElementById('particle-canvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
+            const canvasSla = document.getElementById('particle-canvas-sla');
+            const canvasAdt = document.getElementById('particle-canvas-adt');
+            if (!canvasSla || !canvasAdt) return;
+            const ctxSla = canvasSla.getContext('2d');
+            const ctxAdt = canvasAdt.getContext('2d');
             
-            function alignCanvas() {
-                const plotArea = document.querySelector('#plotly-chart rect.plotbg') || 
-                                 document.querySelector('#plotly-chart .plotbg') || 
-                                 document.querySelector('#plotly-chart rect.bg') ||
-                                 document.querySelector('#plotly-chart .plotarea');
+            function alignCanvas(canvas, chartId, wrapperId) {
+                const plotArea = document.querySelector(`#${chartId} rect.plotbg`) || 
+                                 document.querySelector(`#${chartId} .plotbg`) || 
+                                 document.querySelector(`#${chartId} rect.bg`) ||
+                                 document.querySelector(`#${chartId} .plotarea`);
                 if (!plotArea) return false;
                 const rect = plotArea.getBoundingClientRect();
-                const wrapperRect = document.getElementById('plot-wrapper').getBoundingClientRect();
+                const wrapperRect = document.getElementById(wrapperId).getBoundingClientRect();
                 
                 canvas.style.left = (rect.left - wrapperRect.left) + 'px';
                 canvas.style.top = (rect.top - wrapperRect.top) + 'px';
@@ -949,92 +973,112 @@
                 const dpr = window.devicePixelRatio || 1;
                 canvas.width = rect.width * dpr;
                 canvas.height = rect.height * dpr;
-                ctx.scale(dpr, dpr);
-                return true;
+                canvas.getContext('2d').scale(dpr, dpr);
+                return rect;
             }
             
-            if (!alignCanvas()) {
+            const rectSla = alignCanvas(canvasSla, 'plotly-chart-sla', 'plot-wrapper-sla');
+            const rectAdt = alignCanvas(canvasAdt, 'plotly-chart-adt', 'plot-wrapper-adt');
+            
+            if (!rectSla || !rectAdt) {
                 setTimeout(startParticleAnimation, 100);
                 return;
             }
             
-            canvas.style.display = 'block';
+            canvasSla.style.display = 'block';
+            canvasAdt.style.display = 'block';
             
-            const gd = document.getElementById('plotly-chart');
-            if (!gd || !gd.layout || !gd.layout.xaxis || !gd.layout.yaxis || !gd.layout.xaxis.range || !gd.layout.yaxis.range) {
-                // If Plotly hasn't completed layouts yet, delay and retry
+            const gdSla = document.getElementById('plotly-chart-sla');
+            const gdAdt = document.getElementById('plotly-chart-adt');
+            
+            if (!gdSla || !gdSla.layout || !gdSla.layout.xaxis || !gdSla.layout.yaxis ||
+                !gdAdt || !gdAdt.layout || !gdAdt.layout.xaxis || !gdAdt.layout.yaxis) {
                 setTimeout(startParticleAnimation, 100);
                 return;
             }
             
-            const lonMin = gd.layout.xaxis.range[0];
-            const lonMax = gd.layout.xaxis.range[1];
-            const latMin = gd.layout.yaxis.range[0];
-            const latMax = gd.layout.yaxis.range[1];
+            const lonMinSla = gdSla.layout.xaxis.range[0];
+            const lonMaxSla = gdSla.layout.xaxis.range[1];
+            const latMinSla = gdSla.layout.yaxis.range[0];
+            const latMaxSla = gdSla.layout.yaxis.range[1];
             
-            // Re-generate particles if bounds changed or empty
-            particles = [];
+            const lonMinAdt = gdAdt.layout.xaxis.range[0];
+            const lonMaxAdt = gdAdt.layout.xaxis.range[1];
+            const latMinAdt = gdAdt.layout.yaxis.range[0];
+            const latMaxAdt = gdAdt.layout.yaxis.range[1];
+            
+            particlesSla = [];
+            particlesAdt = [];
             for (let i = 0; i < MAX_PARTICLES; i++) {
-                particles.push(new Particle(lonMin, lonMax, latMin, latMax));
+                particlesSla.push(new Particle(lonMinSla, lonMaxSla, latMinSla, latMaxSla));
+                particlesAdt.push(new Particle(lonMinAdt, lonMaxAdt, latMinAdt, latMaxAdt));
             }
             
             function step() {
                 if (currentsStyle !== 'particles' || !showCurrent) {
-                    canvas.style.display = 'none';
+                    canvasSla.style.display = 'none';
+                    canvasAdt.style.display = 'none';
                     return;
                 }
                 
-                const plotArea = document.querySelector('#plotly-chart rect.plotbg') || 
-                                 document.querySelector('#plotly-chart .plotbg') || 
-                                 document.querySelector('#plotly-chart rect.bg') ||
-                                 document.querySelector('#plotly-chart .plotarea');
-                if (!plotArea) {
+                const plotAreaSla = document.querySelector('#plotly-chart-sla rect.plotbg') || 
+                                    document.querySelector('#plotly-chart-sla .plotbg') || 
+                                    document.querySelector('#plotly-chart-sla rect.bg') ||
+                                    document.querySelector('#plotly-chart-sla .plotarea');
+                const plotAreaAdt = document.querySelector('#plotly-chart-adt rect.plotbg') || 
+                                    document.querySelector('#plotly-chart-adt .plotbg') || 
+                                    document.querySelector('#plotly-chart-adt rect.bg') ||
+                                    document.querySelector('#plotly-chart-adt .plotarea');
+                if (!plotAreaSla || !plotAreaAdt) {
                     particleAnimationId = requestAnimationFrame(step);
                     return;
                 }
-                const rect = plotArea.getBoundingClientRect();
                 
-                // Use destination-out composite mode to fade existing trails on transparent canvas!
-                // This keeps the underlying Plotly map perfectly bright and clear.
-                ctx.globalCompositeOperation = 'destination-out';
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
-                ctx.fillRect(0, 0, rect.width, rect.height);
+                const rectS = plotAreaSla.getBoundingClientRect();
+                const rectA = plotAreaAdt.getBoundingClientRect();
                 
-                // Switch back to normal drawing mode
-                ctx.globalCompositeOperation = 'source-over';
+                ctxSla.globalCompositeOperation = 'destination-out';
+                ctxSla.fillStyle = 'rgba(0, 0, 0, 0.12)';
+                ctxSla.fillRect(0, 0, rectS.width, rectS.height);
+                ctxSla.globalCompositeOperation = 'source-over';
                 
-                ctx.lineWidth = 1.2;
-                ctx.lineCap = 'round';
+                ctxAdt.globalCompositeOperation = 'destination-out';
+                ctxAdt.fillStyle = 'rgba(0, 0, 0, 0.12)';
+                ctxAdt.fillRect(0, 0, rectA.width, rectA.height);
+                ctxAdt.globalCompositeOperation = 'source-over';
                 
-                if (!gd.layout || !gd.layout.xaxis || !gd.layout.yaxis) {
-                    particleAnimationId = requestAnimationFrame(step);
-                    return;
-                }
-                const lonMin = gd.layout.xaxis.range[0];
-                const lonMax = gd.layout.xaxis.range[1];
-                const latMin = gd.layout.yaxis.range[0];
-                const latMax = gd.layout.yaxis.range[1];
+                ctxSla.lineWidth = 1.2;
+                ctxSla.lineCap = 'round';
+                ctxAdt.lineWidth = 1.2;
+                ctxAdt.lineCap = 'round';
                 
-                for (let i = 0; i < particles.length; i++) {
-                    const p = particles[i];
-                    const vel = getVelocityAt(p.lon, p.lat);
-                    
+                const lonMinS = gdSla.layout.xaxis.range[0];
+                const lonMaxS = gdSla.layout.xaxis.range[1];
+                const latMinS = gdSla.layout.yaxis.range[0];
+                const latMaxS = gdSla.layout.yaxis.range[1];
+                
+                const lonMinA = gdAdt.layout.xaxis.range[0];
+                const lonMaxA = gdAdt.layout.xaxis.range[1];
+                const latMinA = gdAdt.layout.yaxis.range[0];
+                const latMaxA = gdAdt.layout.yaxis.range[1];
+                
+                // Animating SLA
+                for (let i = 0; i < particlesSla.length; i++) {
+                    const p = particlesSla[i];
+                    const vel = getVelocityAt(currentSlaData, p.lon, p.lat);
                     if (!vel) {
-                        p.reset(lonMin, lonMax, latMin, latMax);
+                        p.reset(lonMinS, lonMaxS, latMinS, latMaxS);
                         continue;
                     }
-                    
-                    // Update particle simulation position
-                    const speedMultiplier = 0.8; 
-                    p.lon += vel.u * speedMultiplier * 0.03;
-                    p.lat += vel.v * speedMultiplier * 0.03;
+                    p.lon += vel.u * 0.024;
+                    p.lat += vel.v * 0.024;
                     p.age += 1;
                     
-                    const px = ((p.lon - lonMin) / (lonMax - lonMin)) * rect.width;
-                    const py = (1 - (p.lat - latMin) / (latMax - latMin)) * rect.height;
+                    const px = ((p.lon - lonMinS) / (lonMaxS - lonMinS)) * rectS.width;
+                    const py = (1 - (p.lat - latMinS) / (latMaxS - latMinS)) * rectS.height;
                     
-                    if (p.age > p.maxAge || p.lon < lonMin || p.lon > lonMax || p.lat < latMin || p.lat > latMax) {
-                        p.reset(lonMin, lonMax, latMin, latMax);
+                    if (p.age > p.maxAge || p.lon < lonMinS || p.lon > lonMaxS || p.lat < latMinS || p.lat > latMaxS) {
+                        p.reset(lonMinS, lonMaxS, latMinS, latMaxS);
                         continue;
                     }
                     
@@ -1043,19 +1087,51 @@
                         const speed = Math.sqrt(vel.u*vel.u + vel.v*vel.v);
                         const speedPct = Math.min(speed / 0.8, 1.0);
                         
-                        // Draw the foreground bright neon glowing core (no black shadow outline)
-                        ctx.beginPath();
-                        ctx.moveTo(last.x, last.y);
-                        ctx.lineTo(px, py);
-                        ctx.strokeStyle = `rgba(${Math.floor(150 - 100 * speedPct)}, 250, 255, ${0.85 + 0.15 * speedPct})`;
-                        ctx.lineWidth = 1.8;
-                        ctx.stroke();
+                        ctxSla.beginPath();
+                        ctxSla.moveTo(last.x, last.y);
+                        ctxSla.lineTo(px, py);
+                        ctxSla.strokeStyle = `rgba(${Math.floor(150 - 100 * speedPct)}, 200, 255, ${0.85 + 0.15 * speedPct})`;
+                        ctxSla.lineWidth = 1.8;
+                        ctxSla.stroke();
+                    }
+                    p.history.push({ x: px, y: py });
+                    if (p.history.length > 4) p.history.shift();
+                }
+                
+                // Animating ADT
+                for (let i = 0; i < particlesAdt.length; i++) {
+                    const p = particlesAdt[i];
+                    const vel = getVelocityAt(currentAdtData, p.lon, p.lat);
+                    if (!vel) {
+                        p.reset(lonMinA, lonMaxA, latMinA, latMaxA);
+                        continue;
+                    }
+                    p.lon += vel.u * 0.024;
+                    p.lat += vel.v * 0.024;
+                    p.age += 1;
+                    
+                    const px = ((p.lon - lonMinA) / (lonMaxA - lonMinA)) * rectA.width;
+                    const py = (1 - (p.lat - latMinA) / (latMaxA - latMinA)) * rectA.height;
+                    
+                    if (p.age > p.maxAge || p.lon < lonMinA || p.lon > lonMaxA || p.lat < latMinA || p.lat > latMaxA) {
+                        p.reset(lonMinA, lonMaxA, latMinA, latMaxA);
+                        continue;
                     }
                     
-                    p.history.push({ x: px, y: py });
-                    if (p.history.length > 4) {
-                        p.history.shift();
+                    if (p.history.length > 0) {
+                        const last = p.history[p.history.length - 1];
+                        const speed = Math.sqrt(vel.u*vel.u + vel.v*vel.v);
+                        const speedPct = Math.min(speed / 0.8, 1.0);
+                        
+                        ctxAdt.beginPath();
+                        ctxAdt.moveTo(last.x, last.y);
+                        ctxAdt.lineTo(px, py);
+                        ctxAdt.strokeStyle = `rgba(${Math.floor(150 - 100 * speedPct)}, 250, 180, ${0.85 + 0.15 * speedPct})`;
+                        ctxAdt.lineWidth = 1.8;
+                        ctxAdt.stroke();
                     }
+                    p.history.push({ x: px, y: py });
+                    if (p.history.length > 4) p.history.shift();
                 }
                 
                 particleAnimationId = requestAnimationFrame(step);
@@ -1069,12 +1145,14 @@
                 cancelAnimationFrame(particleAnimationId);
                 particleAnimationId = null;
             }
-            const canvas = document.getElementById('particle-canvas');
-            if (canvas) {
-                canvas.style.display = 'none';
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
+            ['particle-canvas-sla', 'particle-canvas-adt'].forEach(id => {
+                const canvas = document.getElementById(id);
+                if (canvas) {
+                    canvas.style.display = 'none';
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            });
         }
 
         // Dynamic small loading indicator text utility
