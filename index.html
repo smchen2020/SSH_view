@@ -298,7 +298,7 @@
                     </div>
 
                     <!-- Bottom Row: Mooring Time-Depth Series (CKM1, CKM6, CKM3) -->
-                    <div class="flex-[4] flex flex-col md:flex-row gap-4 min-h-[280px]">
+                    <div class="flex-[2.8] flex flex-col md:flex-row gap-4 min-h-[196px]">
                         <!-- CKM1 Mooring plot -->
                         <div class="flex-1 h-full flex flex-col gap-1 bg-[#0f172a]/20 border border-slate-800/50 p-2 rounded-2xl relative">
                             <span class="text-[11px] font-bold text-cyan-400 px-1">CKM1 Mooring V-Velocity</span>
@@ -1218,7 +1218,7 @@
                     start: -0.7,
                     end: 0.7,
                     size: 0.1,
-                    showlines: true
+                    showlines: false
                 },
                 colorbar: {
                     title: {
@@ -1272,12 +1272,33 @@
                 shapes: shapesList
             };
 
+            const line0Trace = {
+                x: data.t,
+                y: data.deps,
+                z: data.v,
+                type: 'contour',
+                showscale: false,
+                contours: {
+                    type: 'levels',
+                    start: 0,
+                    end: 0,
+                    size: 1,
+                    showlines: true,
+                    coloring: 'none'
+                },
+                line: {
+                    color: '#64748b',
+                    width: 1.5
+                },
+                hoverinfo: 'skip'
+            };
+
             const config = {
                 responsive: true,
                 displayModeBar: false
             };
 
-            Plotly.newPlot(divId, [trace], layout, config);
+            Plotly.newPlot(divId, [trace, line0Trace], layout, config);
         }
 
         // Fast update of the vertical indicators via relayout
