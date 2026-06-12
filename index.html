@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-screen overflow-hidden">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taiwan Eastern Waters Sea Surface Height Visualizer</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <!-- Plotly.js CDN -->
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        /* Custom styled glassmorphism scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-200 h-screen flex flex-col font-sans antialiased overflow-hidden">
+
+    <!-- Top Header -->
+    <header class="bg-[#111827]/80 backdrop-blur-md border-b border-slate-800 px-6 py-2.5 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                <span class="font-extrabold text-lg">🌀</span>
+            </div>
+            <div>
+                <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">SSH VISUALIZER</h1>
+                <p class="text-xs text-cyan-400 font-semibold tracking-wider uppercase">Taiwan Eastern Waters Real-time Dashboard</p>
+            </div>
+        </div>
+        
+        <!-- Live status pill -->
+        <div class="flex items-center space-x-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-full">
+            <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="text-xs font-semibold text-emerald-400" id="status-pill">Connected to NetCDF</span>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 flex flex-col lg:flex-row p-3 lg:p-4 gap-4 overflow-hidden h-[calc(100vh-61px)]">
+        
+        <!-- Sidebar Controls -->
+        <aside class="w-full lg:w-80 flex flex-col gap-4 overflow-y-auto max-h-full pr-1 shrink-0">
+            
+            <!-- Section 1: Variable & Style Selection -->
+            <div class="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <h2 class="text-sm font-bold text-cyan-400 tracking-wide uppercase flex items-center gap-2">
+                    <span>🎨</span> 1. Variable & Display Style
+                </h2>
+                
+                <!-- Toggle switches -->
+                <div class="grid grid-cols-2 gap-2 bg-[#0f172a] p-1 rounded-xl border border-slate-800/50">
+                    <button id="btn-var-sla" onclick="setVariable('sla')" class="py-2 text-xs font-bold rounded-lg transition-all duration-200 bg-blue-600 text-white shadow-md shadow-blue-500/10">SLA</button>
+                    <button id="btn-var-adt" onclick="setVariable('adt')" class="py-2 text-xs font-bold rounded-lg transition-all duration-200 text-slate-400 hover:text-white">ADT</button>
+                </div>
+
+                <!-- Styled Options Checkboxes -->
+                <div class="flex flex-col gap-3 pt-1">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" id="chk-lock-scale" onchange="toggleLockScale()" class="hidden peer">
+                        <div class="w-5 h-5 bg-[#0f172a] border border-slate-700 peer-checked:bg-blue-500 peer-checked:border-blue-500 rounded-md flex items-center justify-center transition-all group-hover:border-slate-500">
+                            <svg class="w-3.5 h-3.5 text-white scale-0 peer-checked:scale-100 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <span class="text-xs text-slate-300 font-medium group-hover:text-white transition-colors">Lock Color Scale</span>
+                    </label>
+
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" id="chk-show-current" checked onchange="toggleShowCurrent()" class="hidden peer">
+                        <div class="w-5 h-5 bg-[#0f172a] border border-slate-700 peer-checked:bg-blue-500 peer-checked:border-blue-500 rounded-md flex items-center justify-center transition-all group-hover:border-slate-500">
+                            <svg class="w-3.5 h-3.5 text-white scale-0 peer-checked:scale-100 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <span class="text-xs text-slate-300 font-medium group-hover:text-white transition-colors">Show Geostrophic Currents</span>
+                    </label>
+
+                    <!-- Currents Style Selector -->
+                    <div id="current-style-group" class="flex flex-col gap-1.5 pl-8 transition-all duration-300">
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Currents Style</span>
+                        <div class="grid grid-cols-2 gap-1.5 bg-[#0f172a] p-1 rounded-lg border border-slate-800/80">
+                            <button id="btn-style-arrows" onclick="setCurrentsStyle('arrows')" class="py-1 text-[10px] font-bold rounded transition-all duration-200 bg-blue-600 text-white shadow-md shadow-blue-500/10">Arrows</button>
+                            <button id="btn-style-particles" onclick="setCurrentsStyle('particles')" class="py-1 text-[10px] font-bold rounded transition-all duration-200 text-slate-400 hover:text-white">Particles</button>
+                        </div>
+                    </div>
+
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" id="chk-show-stations" checked onchange="toggleShowStations()" class="hidden peer">
+                        <div class="w-5 h-5 bg-[#0f172a] border border-slate-700 peer-checked:bg-blue-500 peer-checked:border-blue-500 rounded-md flex items-center justify-center transition-all group-hover:border-slate-500">
+                            <svg class="w-3.5 h-3.5 text-white scale-0 peer-checked:scale-100 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <span class="text-xs text-slate-300 font-medium group-hover:text-white transition-colors">Show Dynamic Stations</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Section 2: Date Navigation -->
+            <div class="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <h2 class="text-sm font-bold text-cyan-400 tracking-wide uppercase flex items-center gap-2">
+                    <span>📅</span> 2. Timeline Navigation
+                </h2>
+                
+                <!-- Prev/Next Controls -->
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="prevDay()" class="bg-[#0f172a] hover:bg-slate-800 border border-slate-800 text-xs font-bold py-2 px-3 rounded-xl transition flex items-center justify-center gap-2 group">
+                        <span class="group-hover:-translate-x-0.5 transition-transform">◀</span> Prev Day
+                    </button>
+                    <button onclick="nextDay()" class="bg-[#0f172a] hover:bg-slate-800 border border-slate-800 text-xs font-bold py-2 px-3 rounded-xl transition flex items-center justify-center gap-2 group">
+                        Next Day <span class="group-hover:translate-x-0.5 transition-transform">▶</span>
+                    </button>
+                </div>
+
+                <!-- Styled date picker and slider -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Select Calendar Date</label>
+                    <input type="date" id="date-input" onchange="onDateCalendarChange()" class="w-full bg-[#0f172a] border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500">
+                </div>
+
+                <div class="flex flex-col gap-2 pt-1">
+                    <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+                        <span>Scrub Timeline</span>
+                        <span id="slider-index-lbl" class="text-cyan-400 font-semibold">Day 0</span>
+                    </div>
+                    <input type="range" id="time-slider" min="0" max="0" value="0" oninput="onSliderChange(this.value)" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                </div>
+            </div>
+
+            <!-- Section 3: Temporal Average -->
+            <div class="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
+                <h2 class="text-sm font-bold text-cyan-400 tracking-wide uppercase flex items-center gap-2">
+                    <span>📊</span> 3. Temporal Average
+                </h2>
+                
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[9px] text-slate-400 uppercase font-bold">Start Date</label>
+                        <input type="date" id="avg-start-date" class="bg-[#0f172a] border border-slate-800 rounded-lg p-1.5 text-[11px] text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[9px] text-slate-400 uppercase font-bold">End Date</label>
+                        <input type="date" id="avg-end-date" class="bg-[#0f172a] border border-slate-800 rounded-lg p-1.5 text-[11px] text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 pt-2">
+                    <button onclick="calculateAverage()" class="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold py-2 rounded-xl text-xs transition shadow-md shadow-blue-500/10">Show Average</button>
+                    <button onclick="resetAverage()" class="bg-[#0f172a] border border-slate-800 hover:bg-slate-800 text-slate-300 font-bold py-2 rounded-xl text-xs transition">Reset Daily</button>
+                </div>
+            </div>
+
+            <!-- Section 4: Autoplay -->
+            <div class="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
+                <h2 class="text-sm font-bold text-cyan-400 tracking-wide uppercase flex items-center gap-2">
+                    <span>🎮</span> 4. Autoplay Slider
+                </h2>
+                <button id="btn-play" onclick="togglePlay()" class="w-full bg-[#0f172a] hover:bg-slate-800 border border-slate-800 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center gap-2">
+                    <span id="play-icon">▶</span> <span id="play-text">Play Slideshow</span>
+                </button>
+                
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase font-bold">
+                        <span>Speed Interval</span>
+                        <span id="speed-lbl" class="text-cyan-400">300ms</span>
+                    </div>
+                    <input type="range" id="speed-slider" min="50" max="1500" value="300" step="50" oninput="changePlaySpeed(this.value)" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                </div>
+            </div>
+
+            <!-- Section 5: Boundaries -->
+            <div class="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex flex-col gap-3 shadow-xl mb-4">
+                <h2 class="text-sm font-bold text-cyan-400 tracking-wide uppercase flex items-center gap-2">
+                    <span>🗺️</span> 5. Boundary Crop
+                </h2>
+                
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] text-slate-400 uppercase font-bold">Lon Min</label>
+                        <input type="number" id="bounds-lon-min" step="0.5" class="bg-[#0f172a] border border-slate-800 rounded-lg p-1.5 text-white font-medium focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] text-slate-400 uppercase font-bold">Lon Max</label>
+                        <input type="number" id="bounds-lon-max" step="0.5" class="bg-[#0f172a] border border-slate-800 rounded-lg p-1.5 text-white font-medium focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] text-slate-400 uppercase font-bold">Lat Min</label>
+                        <input type="number" id="bounds-lat-min" step="0.5" class="bg-[#0f172a] border border-slate-800 rounded-lg p-1.5 text-white font-medium focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] text-slate-400 uppercase font-bold">Lat Max</label>
+                        <input type="number" id="bounds-lat-max" step="0.5" class="bg-[#0f172a] border border-slate-800 rounded-lg p-1.5 text-white font-medium focus:outline-none focus:border-cyan-500">
+                    </div>
+                </div>
+
+                <button onclick="applyNewBounds()" class="w-full bg-[#0f172a] border border-slate-800 hover:bg-slate-800 font-bold py-2 rounded-xl text-xs transition mt-1">
+                    Apply Boundary Crop
+                </button>
+            </div>
+
+        </aside>
+
+        <!-- Dynamic Visualization Dashboard -->
+        <main class="flex-1 flex flex-col gap-3 overflow-hidden h-full">
+            
+            <!-- Plot Window -->
+            <div class="flex-1 bg-slate-900/40 backdrop-blur-sm border border-slate-800 rounded-2xl p-3 flex flex-col shadow-2xl relative overflow-hidden">
+                
+                <!-- Title block overlay on top of plot -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-2 border-b border-slate-800 pb-2 gap-2">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <span id="title-lbl-icon">🌊</span>
+                            <span id="title-variable-name">Sea Level Anomaly (SLA)</span>
+                            <span class="text-slate-500 font-normal">|</span>
+                            <span id="title-date-label" class="text-cyan-400 font-bold">Date: --</span>
+                        </h3>
+                    </div>
+                    <!-- Zoom & Loading indicator -->
+                    <div class="flex items-center gap-3 self-start md:self-auto">
+                        <!-- Dynamic Loading Indicator -->
+                        <div id="loading-text" class="opacity-0 transition-opacity duration-200 text-xs font-bold text-cyan-400 flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></span>
+                            <span>LOADING...</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500 font-semibold bg-slate-950/80 px-3 py-1 rounded-md border border-slate-900 flex items-center gap-1.5">
+                            <span>🔍</span> Drag on plot to zoom. Double-click to reset.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Plot Workspace -->
+                <div class="flex-1 flex flex-row gap-3 min-h-0 w-full overflow-hidden">
+                    
+                    <!-- Vertical Stats Panel (Left) -->
+                    <div class="w-28 shrink-0 flex flex-col justify-center gap-2 bg-[#0f172a]/60 border border-slate-800/80 rounded-xl p-2.5 self-center">
+                        <div class="text-[9px] text-cyan-400 font-bold uppercase tracking-wider border-b border-slate-850 pb-1 mb-1 text-center">Stats</div>
+                        
+                        <div class="flex flex-col gap-0.5 border-b border-slate-900/50 pb-1.5">
+                            <span class="text-[8px] text-slate-500 uppercase font-bold">Min</span>
+                            <span class="text-xs font-extrabold text-blue-400" id="stat-min">-- m</span>
+                        </div>
+                        
+                        <div class="flex flex-col gap-0.5 border-b border-slate-900/50 pb-1.5">
+                            <span class="text-[8px] text-slate-500 uppercase font-bold">Max</span>
+                            <span class="text-xs font-extrabold text-emerald-400" id="stat-max">-- m</span>
+                        </div>
+                        
+                        <div class="flex flex-col gap-0.5 border-b border-slate-900/50 pb-1.5">
+                            <span class="text-[8px] text-slate-500 uppercase font-bold">Mean</span>
+                            <span class="text-xs font-extrabold text-yellow-400" id="stat-mean">-- m</span>
+                        </div>
+                        
+                        <div class="flex flex-col gap-0.5">
+                            <span class="text-[8px] text-slate-500 uppercase font-bold">Std Dev</span>
+                            <span class="text-xs font-extrabold text-fuchsia-400" id="stat-std">-- m</span>
+                        </div>
+                    </div>
+
+                    <!-- Plot container (Right) -->
+                    <div class="flex-1 h-full rounded-xl overflow-hidden relative" id="plot-wrapper">
+                        <!-- Plotly target -->
+                        <div id="plotly-chart" class="w-full h-full"></div>
+                        <!-- Transparent Canvas for Particle flow overlay -->
+                        <canvas id="particle-canvas" class="absolute pointer-events-none rounded-xl z-10" style="top: 0; left: 0; display: none; z-index: 10;"></canvas>
+                    </div>
+
+                </div>
+
+        </main>
+
+    </div>
+
+    <!-- Script Block -->
+    <script>
+        // Global variables state
+        let dates = [];
+        let stations = [];
+        let limits = { sla: [-1, 1], adt: [-1, 1] };
+        let bounds = { lon_min: 118, lon_max: 126, lat_min: 19, lat_max: 27 };
+        
+        let currentIndex = 0;
+        let currentVariable = 'sla';
+        let lockScale = false;
+        let showCurrent = true;
+        let showStations = true;
+        
+        // Particle system simulation state
+        let currentData = null;
+        let currentsStyle = 'arrows'; // 'arrows' or 'particles'
+        let particleAnimationId = null;
+        let particles = [];
+        const MAX_PARTICLES = 1200;
+        
+        class Particle {
+            constructor(lonMin, lonMax, latMin, latMax) {
+                this.reset(lonMin, lonMax, latMin, latMax);
+                this.age = Math.random() * 100;
+            }
+            
+            reset(lonMin, lonMax, latMin, latMax) {
+                this.lon = lonMin + Math.random() * (lonMax - lonMin);
+                this.lat = latMin + Math.random() * (latMax - latMin);
+                this.age = 0;
+                this.maxAge = 40 + Math.random() * 60;
+                this.history = []; // trail points
+            }
+        }
+        
+        let isPlaying = false;
+        let playIntervalId = null;
+        let playSpeed = 300; // ms
+        
+        let averageMode = false;
+        let avgStart = null;
+        let avgEnd = null;
+
+        // On document load
+        window.addEventListener('DOMContentLoaded', async () => {
+            await fetchInitMetadata();
+            await fetchSlice();
+            
+            // Explicitly prevent any mouse wheel scroll inside the chart to keep the view perfectly stable
+            const chartEl = document.getElementById('plotly-chart');
+            if (chartEl) {
+                chartEl.addEventListener('wheel', function(e) {
+                    e.preventDefault();
+                }, { passive: false });
+
+                // Synchronize particle system canvas when zooming or panning map
+                chartEl.on('plotly_relayout', function(eventdata) {
+                    if (showCurrent && currentsStyle === 'particles') {
+                        setTimeout(startParticleAnimation, 50);
+                    }
+                });
+            }
+        });
+
+        // Initialize metadata from API
+        async function fetchInitMetadata() {
+            showLoading(true);
+            try {
+                const res = await fetch('/api/init');
+                if (!res.ok) throw new Error("Metadata failed");
+                const data = await res.json();
+                
+                dates = data.dates;
+                stations = data.stations;
+                limits = data.limits;
+                bounds = data.bounds;
+
+                // Setup boundaries inputs
+                document.getElementById('bounds-lon-min').value = bounds.lon_min;
+                document.getElementById('bounds-lon-max').value = bounds.lon_max;
+                document.getElementById('bounds-lat-min').value = bounds.lat_min;
+                document.getElementById('bounds-lat-max').value = bounds.lat_max;
+
+                // Setup date range picker limits
+                const minDate = dates[0];
+                const maxDate = dates[dates.length - 1];
+                
+                const dateIn = document.getElementById('date-input');
+                dateIn.min = minDate;
+                dateIn.max = maxDate;
+                dateIn.value = minDate;
+
+                // Average dates default setting
+                const avgStartIn = document.getElementById('avg-start-date');
+                const avgEndIn = document.getElementById('avg-end-date');
+                avgStartIn.min = minDate;
+                avgStartIn.max = maxDate;
+                avgStartIn.value = minDate;
+                
+                avgEndIn.min = minDate;
+                avgEndIn.max = maxDate;
+                avgEndIn.value = maxDate;
+
+                // Slider settings
+                const slider = document.getElementById('time-slider');
+                slider.max = dates.length - 1;
+                slider.value = 0;
+
+            } catch (err) {
+                console.error("Initialization error:", err);
+                document.getElementById('status-pill').textContent = "Connection Error";
+                document.getElementById('status-pill').classList.replace('text-emerald-400', 'text-rose-400');
+            }
+            showLoading(false);
+        }
+
+        // Fetch dynamic slice from FastAPI
+        async function fetchSlice() {
+            showLoading(true);
+            try {
+                let url = `/api/slice?index=${currentIndex}&var_name=${currentVariable}`;
+                
+                // Add boundaries parameters
+                url += `&lon_min=${bounds.lon_min}&lon_max=${bounds.lon_max}&lat_min=${bounds.lat_min}&lat_max=${bounds.lat_max}`;
+                
+                // Add average dates if in average mode
+                if (averageMode && avgStart && avgEnd) {
+                    url += `&avg_start=${avgStart}&avg_end=${avgEnd}`;
+                }
+
+                const res = await fetch(url);
+                if (!res.ok) throw new Error("Data fetch error");
+                const data = await res.json();
+
+                // Update date title and timeline views
+                document.getElementById('title-date-label').textContent = averageMode ? data.date : `Date: ${data.date}`;
+                if (!averageMode) {
+                    document.getElementById('date-input').value = data.date;
+                    document.getElementById('time-slider').value = currentIndex;
+                    document.getElementById('slider-index-lbl').textContent = `Day ${currentIndex}`;
+                }
+
+                // Update Stats Banner
+                document.getElementById('stat-min').textContent = `${data.stats.min.toFixed(3)} m`;
+                document.getElementById('stat-max').textContent = `${data.stats.max.toFixed(3)} m`;
+                document.getElementById('stat-mean').textContent = `${data.stats.mean.toFixed(3)} m`;
+                document.getElementById('stat-std').textContent = `${data.stats.std.toFixed(3)} m`;
+
+                // Render Map Plot using Plotly
+                renderPlot(data);
+                
+                currentData = data;
+                if (showCurrent && currentsStyle === 'particles') {
+                    setTimeout(startParticleAnimation, 150);
+                } else {
+                    stopParticleAnimation();
+                }
+
+            } catch (err) {
+                console.error("Fetch slice error:", err);
+            }
+            showLoading(false);
+        }
+
+        // Render fully interactive map using Plotly.js
+        function renderPlot(data) {
+            const traces = [];
+
+            // 1. Contours of Sea surface height
+            let colorScaleName = currentVariable === 'sla' ? 'RdBu' : 'Jet';
+            let colorScaleLimits = {};
+
+            if (lockScale) {
+                // Lock global maximums & minimums
+                const globalLims = limits[currentVariable];
+                if (currentVariable === 'sla') {
+                    // Force symmetric color scale for SLA anomaly
+                    const limit = Math.max(Math.abs(globalLims[0]), Math.abs(globalLims[1]));
+                    colorScaleLimits = { zmin: -limit, zmax: limit };
+                } else {
+                    colorScaleLimits = { zmin: globalLims[0], zmax: globalLims[1] };
+                }
+            } else {
+                if (currentVariable === 'sla') {
+                    const limit = Math.max(Math.abs(data.stats.min), Math.abs(data.stats.max));
+                    colorScaleLimits = { zmin: -limit, zmax: limit };
+                } else {
+                    colorScaleLimits = { zmin: data.stats.min, zmax: data.stats.max };
+                }
+            }
+
+            const contourTrace = {
+                x: data.lon,
+                y: data.lat,
+                z: data.z,
+                type: 'contour',
+                colorscale: colorScaleName,
+                reversescale: false,
+                autocontour: true,
+                ncontours: 28,
+                zmin: colorScaleLimits.zmin,
+                zmax: colorScaleLimits.zmax,
+                colorbar: {
+                    title: {
+                        text: currentVariable === 'sla' ? 'SLA (m)' : 'ADT (m)',
+                        font: { color: '#94a3b8', size: 11, family: 'Outfit' }
+                    },
+                    tickfont: { color: '#94a3b8', size: 10, family: 'Outfit' },
+                    thickness: 16,
+                    len: 0.9,
+                    y: 0.5
+                },
+                hoverinfo: 'x+y+z',
+                hovertemplate: '<b>Coordinate</b><br>Lon: %{x:.2f}°E<br>Lat: %{y:.2f}°N<br>SSH: %{z:.3f} m<extra></extra>',
+                zauto: false
+            };
+            traces.push(contourTrace);
+
+            // 2. Geostrophic current vector lines (quiver)
+            if (showCurrent && data.u && data.v && currentsStyle === 'arrows') {
+                // To keep plot readable and high-performance, we construct quiver arrow shafts in Javascript
+                const arrowXs = [];
+                const arrowYs = [];
+                
+                // Scale factor for velocity arrows to be visible
+                const scale = 0.65; 
+                
+                // Step for grid sub-sampling to keep arrow density clean
+                const step = 1; 
+
+                for (let i = 0; i < data.lat.length; i += step) {
+                    for (let j = 0; j < data.lon.length; j += step) {
+                        const uVal = data.u[i][j];
+                        const vVal = data.v[i][j];
+                        
+                        if (uVal === null || vVal === null || isNaN(uVal) || isNaN(vVal)) continue;
+
+                        const startX = data.lon[j];
+                        const startY = data.lat[i];
+                        const endX = startX + uVal * scale;
+                        const endY = startY + vVal * scale;
+
+                        // Shaft
+                        arrowXs.push(startX, endX, null);
+                        arrowYs.push(startY, endY, null);
+
+                        // Arrow head lines (optional, retrofitted backward angles)
+                        const angle = Math.atan2(vVal, uVal);
+                        const arrowSize = 0.05; // length of arrowhead
+                        
+                        const head1X = endX - arrowSize * Math.cos(angle - Math.PI / 6);
+                        const head1Y = endY - arrowSize * Math.sin(angle - Math.PI / 6);
+                        const head2X = endX - arrowSize * Math.cos(angle + Math.PI / 6);
+                        const head2Y = endY - arrowSize * Math.sin(angle + Math.PI / 6);
+
+                        arrowXs.push(endX, head1X, null);
+                        arrowYs.push(endY, head1Y, null);
+                        arrowXs.push(endX, head2X, null);
+                        arrowYs.push(endY, head2Y, null);
+                    }
+                }
+
+                const currentTrace = {
+                    x: arrowXs,
+                    y: arrowYs,
+                    mode: 'lines',
+                    type: 'scatter',
+                    line: {
+                        color: '#0f172a',
+                        width: 1.0
+                    },
+                    name: 'Currents',
+                    hoverinfo: 'skip'
+                };
+                traces.push(currentTrace);
+            }
+
+            // 3. High-resolution vector coastlines - Renders as mathematically smooth closed polygons on top!
+            if (data.coastlines && data.coastlines.length > 0) {
+                data.coastlines.forEach((poly, index) => {
+                    const polyTrace = {
+                        x: poly.lon,
+                        y: poly.lat,
+                        mode: 'lines',
+                        fill: 'toself',
+                        fillcolor: '#475569', // Sophisticated slightly lighter slate gray for land
+                        line: {
+                            color: '#334155', // Sub-pixel clean outline in slightly darker slate
+                            width: 1.0
+                        },
+                        name: 'Land',
+                        hoverinfo: 'skip',
+                        type: 'scatter'
+                    };
+                    traces.push(polyTrace);
+                });
+            }
+
+            // 4. Stations overlay - Always sits on top of land
+            if (showStations && stations.length > 0) {
+                const stationXs = stations.map(s => s[1]);
+                const stationYs = stations.map(s => s[2]);
+                const stationNames = stations.map(s => s[0]);
+
+                const stationTrace = {
+                    x: stationXs,
+                    y: stationYs,
+                    mode: 'markers',
+                    type: 'scatter',
+                    marker: {
+                        symbol: 'triangle-up',
+                        size: 11,
+                        color: '#facc15',
+                        line: { color: '#090d16', width: 1.2 }
+                    },
+                    text: stationNames,
+                    name: 'Stations',
+                    hovertemplate: '<b>Station</b><br>%{text}<br>Lon: %{x:.2f}°E<br>Lat: %{y:.2f}°N<extra></extra>'
+                };
+                traces.push(stationTrace);
+            }
+
+            // Build Layout options
+            const layout = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: '#ffffff', // Set missing data area background to clean white
+                margin: { l: 30, r: 10, t: 15, b: 30 },
+                xaxis: {
+                    title: { text: 'Longitude (°E)', font: { color: '#94a3b8', family: 'Outfit', size: 11 } },
+                    tickfont: { color: '#94a3b8', family: 'Outfit', size: 10 },
+                    gridcolor: '#e2e8f0', // Elegant light grid lines
+                    linecolor: '#cbd5e1', // Light slate borders
+                    zeroline: false,
+                    scaleanchor: 'y', // Lock 1:1 aspect ratio! Essential for geographic accuracy!
+                    scaleratio: 1,
+                    constrain: 'domain', // CRITICAL: Stop axis ranges from expanding and keep grid bounds locked!
+                    constraintoward: 'center',
+                    range: [bounds.lon_min, bounds.lon_max]
+                },
+                yaxis: {
+                    title: { text: 'Latitude (°N)', font: { color: '#94a3b8', family: 'Outfit', size: 11 } },
+                    tickfont: { color: '#94a3b8', family: 'Outfit', size: 10 },
+                    gridcolor: '#e2e8f0', // Elegant light grid lines
+                    linecolor: '#cbd5e1', // Light slate borders
+                    zeroline: false,
+                    range: [bounds.lat_min, bounds.lat_max]
+                },
+                showlegend: false,
+                autosize: true
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['select2d', 'lasso2d', 'toggleHover'],
+                displaylogo: false
+            };
+
+            Plotly.newPlot('plotly-chart', traces, layout, config);
+        }
+
+        // Toggle variables
+        function setVariable(variable) {
+            if (currentVariable === variable) return;
+            currentVariable = variable;
+            
+            const btnSla = document.getElementById('btn-var-sla');
+            const btnAdt = document.getElementById('btn-var-adt');
+
+            if (variable === 'sla') {
+                btnSla.className = "py-2 text-xs font-bold rounded-lg transition-all duration-200 bg-blue-600 text-white shadow-md shadow-blue-500/10";
+                btnAdt.className = "py-2 text-xs font-bold rounded-lg transition-all duration-200 text-slate-400 hover:text-white";
+                document.getElementById('title-variable-name').textContent = "Sea Level Anomaly (SLA)";
+                document.getElementById('title-lbl-icon').textContent = "🌊";
+            } else {
+                btnAdt.className = "py-2 text-xs font-bold rounded-lg transition-all duration-200 bg-blue-600 text-white shadow-md shadow-blue-500/10";
+                btnSla.className = "py-2 text-xs font-bold rounded-lg transition-all duration-200 text-slate-400 hover:text-white";
+                document.getElementById('title-variable-name').textContent = "Absolute Dynamic Topography (ADT)";
+                document.getElementById('title-lbl-icon').textContent = "🏔️";
+            }
+            fetchSlice();
+        }
+
+        // Controls interactions
+        function toggleLockScale() {
+            lockScale = document.getElementById('chk-lock-scale').checked;
+            fetchSlice();
+        }
+
+        function toggleShowCurrent() {
+            showCurrent = document.getElementById('chk-show-current').checked;
+            fetchSlice();
+        }
+
+        function toggleShowStations() {
+            showStations = document.getElementById('chk-show-stations').checked;
+            fetchSlice();
+        }
+
+        // Slider/calendar timeline change
+        function onSliderChange(val) {
+            currentIndex = parseInt(val);
+            document.getElementById('slider-index-lbl').textContent = `Day ${currentIndex}`;
+            averageMode = false;
+            fetchSlice();
+        }
+
+        function onDateCalendarChange() {
+            const dateStr = document.getElementById('date-input').value;
+            const idx = dates.indexOf(dateStr);
+            if (idx !== -1) {
+                currentIndex = idx;
+                averageMode = false;
+                fetchSlice();
+            }
+        }
+
+        // Stepper
+        function prevDay() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                averageMode = false;
+                fetchSlice();
+            }
+        }
+
+        function nextDay() {
+            if (currentIndex < dates.length - 1) {
+                currentIndex++;
+                averageMode = false;
+                fetchSlice();
+            }
+        }
+
+        // Play slideshow
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            const btn = document.getElementById('btn-play');
+            const icon = document.getElementById('play-icon');
+            const txt = document.getElementById('play-text');
+
+            if (isPlaying) {
+                icon.textContent = "⏸";
+                txt.textContent = "Pause Slideshow";
+                btn.classList.add('bg-blue-600', 'hover:bg-blue-500', 'text-white');
+                averageMode = false;
+                playIntervalId = setInterval(() => {
+                    if (currentIndex < dates.length - 1) {
+                        currentIndex++;
+                    } else {
+                        currentIndex = 0; // wrap around
+                    }
+                    fetchSlice();
+                }, playSpeed);
+            } else {
+                icon.textContent = "▶";
+                txt.textContent = "Play Slideshow";
+                btn.classList.remove('bg-blue-600', 'hover:bg-blue-500', 'text-white');
+                clearInterval(playIntervalId);
+            }
+        }
+
+        function changePlaySpeed(val) {
+            playSpeed = parseInt(val);
+            document.getElementById('speed-lbl').textContent = `${playSpeed}ms`;
+            if (isPlaying) {
+                // Re-initialize interval with new speed
+                togglePlay();
+                togglePlay();
+            }
+        }
+
+        // Average calculation
+        function calculateAverage() {
+            const start = document.getElementById('avg-start-date').value;
+            const end = document.getElementById('avg-end-date').value;
+            
+            if (new Date(start) > new Date(end)) {
+                alert("Start date cannot be after End date!");
+                return;
+            }
+            
+            avgStart = start;
+            avgEnd = end;
+            averageMode = true;
+            
+            // Stop playing if running
+            if (isPlaying) togglePlay();
+            
+            fetchSlice();
+        }
+
+        function resetAverage() {
+            averageMode = false;
+            fetchSlice();
+        }
+
+        // Dynamic boundaries crop loading
+        function applyNewBounds() {
+            const lonMin = parseFloat(document.getElementById('bounds-lon-min').value);
+            const lonMax = parseFloat(document.getElementById('bounds-lon-max').value);
+            const latMin = parseFloat(document.getElementById('bounds-lat-min').value);
+            const latMax = parseFloat(document.getElementById('bounds-lat-max').value);
+
+            if (lonMin >= lonMax || latMin >= latMax) {
+                alert("Invalid boundary parameters. Min coordinate must be less than Max coordinate.");
+                return;
+            }
+
+            bounds = { lon_min: lonMin, lon_max: lonMax, lat_min: latMin, lat_max: latMax };
+            fetchSlice();
+        }
+
+        // Geostrophic currents layout toggle
+        function toggleShowCurrent() {
+            showCurrent = document.getElementById('chk-show-current').checked;
+            const styleGroup = document.getElementById('current-style-group');
+            if (showCurrent) {
+                styleGroup.classList.remove('opacity-40', 'pointer-events-none');
+                if (currentsStyle === 'particles') {
+                    setTimeout(startParticleAnimation, 150);
+                }
+            } else {
+                styleGroup.classList.add('opacity-40', 'pointer-events-none');
+                stopParticleAnimation();
+            }
+            fetchSlice();
+        }
+
+        // Toggle geostrophic currents rendering style: static arrows vs dynamic particles
+        function setCurrentsStyle(style) {
+            currentsStyle = style;
+            const btnArrows = document.getElementById('btn-style-arrows');
+            const btnParticles = document.getElementById('btn-style-particles');
+            
+            if (style === 'arrows') {
+                btnArrows.classList.add('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-500/10');
+                btnArrows.classList.remove('text-slate-400', 'hover:text-white');
+                btnParticles.classList.remove('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-500/10');
+                btnParticles.classList.add('text-slate-400', 'hover:text-white');
+                stopParticleAnimation();
+                fetchSlice();
+            } else {
+                btnParticles.classList.add('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-500/10');
+                btnParticles.classList.remove('text-slate-400', 'hover:text-white');
+                btnArrows.classList.remove('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-500/10');
+                btnArrows.classList.add('text-slate-400', 'hover:text-white');
+                fetchSlice(); // Clear Plotly arrows first
+            }
+        }
+
+        // Bilinear interpolation for particle geostrophic velocity (handles ascending and descending coordinate axes)
+        function getVelocityAt(lon, lat) {
+            if (!currentData || !currentData.u || !currentData.v) return null;
+            
+            const lons = currentData.lon;
+            const lats = currentData.lat;
+            
+            // Find grid cell indices (robust to both ascending & descending coordinate arrays)
+            let i = -1;
+            for (let r = 0; r < lats.length - 1; r++) {
+                const latMinVal = Math.min(lats[r], lats[r+1]);
+                const latMaxVal = Math.max(lats[r], lats[r+1]);
+                if (lat >= latMinVal && lat <= latMaxVal) {
+                    i = r;
+                    break;
+                }
+            }
+            let j = -1;
+            for (let c = 0; c < lons.length - 1; c++) {
+                const lonMinVal = Math.min(lons[c], lons[c+1]);
+                const lonMaxVal = Math.max(lons[c], lons[c+1]);
+                if (lon >= lonMinVal && lon <= lonMaxVal) {
+                    j = c;
+                    break;
+                }
+            }
+            
+            if (i === -1 || j === -1) return null;
+            
+            const lon0 = lons[j];
+            const lon1 = lons[j+1];
+            const lat0 = lats[i];
+            const lat1 = lats[i+1];
+            
+            const tx = (lon - lon0) / (lon1 - lon0);
+            const ty = (lat - lat0) / (lat1 - lat0);
+            
+            const u00 = currentData.u[i][j];
+            const u01 = currentData.u[i][j+1];
+            const u10 = currentData.u[i+1][j];
+            const u11 = currentData.u[i+1][j+1];
+            
+            const v00 = currentData.v[i][j];
+            const v01 = currentData.v[i][j+1];
+            const v10 = currentData.v[i+1][j];
+            const v11 = currentData.v[i+1][j+1];
+            
+            if (u00 === null || u01 === null || u10 === null || u11 === null) return null;
+            if (v00 === null || v01 === null || v10 === null || v11 === null) return null;
+            
+            const u = (1-tx)*(1-ty)*u00 + tx*(1-ty)*u01 + (1-tx)*ty*u10 + tx*ty*u11;
+            const v = (1-tx)*(1-ty)*v00 + tx*(1-ty)*v01 + (1-tx)*ty*v10 + tx*ty*v11;
+            
+            return { u, v };
+        }
+
+        // Start dynamic particle animation loop
+        function startParticleAnimation() {
+            if (particleAnimationId) {
+                cancelAnimationFrame(particleAnimationId);
+            }
+            
+            const canvas = document.getElementById('particle-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            function alignCanvas() {
+                const plotArea = document.querySelector('#plotly-chart rect.plotbg') || 
+                                 document.querySelector('#plotly-chart .plotbg') || 
+                                 document.querySelector('#plotly-chart rect.bg') ||
+                                 document.querySelector('#plotly-chart .plotarea');
+                if (!plotArea) return false;
+                const rect = plotArea.getBoundingClientRect();
+                const wrapperRect = document.getElementById('plot-wrapper').getBoundingClientRect();
+                
+                canvas.style.left = (rect.left - wrapperRect.left) + 'px';
+                canvas.style.top = (rect.top - wrapperRect.top) + 'px';
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = rect.height + 'px';
+                
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+                return true;
+            }
+            
+            if (!alignCanvas()) {
+                setTimeout(startParticleAnimation, 100);
+                return;
+            }
+            
+            canvas.style.display = 'block';
+            
+            const gd = document.getElementById('plotly-chart');
+            if (!gd || !gd.layout || !gd.layout.xaxis || !gd.layout.yaxis || !gd.layout.xaxis.range || !gd.layout.yaxis.range) {
+                // If Plotly hasn't completed layouts yet, delay and retry
+                setTimeout(startParticleAnimation, 100);
+                return;
+            }
+            
+            const lonMin = gd.layout.xaxis.range[0];
+            const lonMax = gd.layout.xaxis.range[1];
+            const latMin = gd.layout.yaxis.range[0];
+            const latMax = gd.layout.yaxis.range[1];
+            
+            // Re-generate particles if bounds changed or empty
+            particles = [];
+            for (let i = 0; i < MAX_PARTICLES; i++) {
+                particles.push(new Particle(lonMin, lonMax, latMin, latMax));
+            }
+            
+            function step() {
+                if (currentsStyle !== 'particles' || !showCurrent) {
+                    canvas.style.display = 'none';
+                    return;
+                }
+                
+                const plotArea = document.querySelector('#plotly-chart rect.plotbg') || 
+                                 document.querySelector('#plotly-chart .plotbg') || 
+                                 document.querySelector('#plotly-chart rect.bg') ||
+                                 document.querySelector('#plotly-chart .plotarea');
+                if (!plotArea) {
+                    particleAnimationId = requestAnimationFrame(step);
+                    return;
+                }
+                const rect = plotArea.getBoundingClientRect();
+                
+                // Use destination-out composite mode to fade existing trails on transparent canvas!
+                // This keeps the underlying Plotly map perfectly bright and clear.
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+                ctx.fillRect(0, 0, rect.width, rect.height);
+                
+                // Switch back to normal drawing mode
+                ctx.globalCompositeOperation = 'source-over';
+                
+                ctx.lineWidth = 1.2;
+                ctx.lineCap = 'round';
+                
+                if (!gd.layout || !gd.layout.xaxis || !gd.layout.yaxis) {
+                    particleAnimationId = requestAnimationFrame(step);
+                    return;
+                }
+                const lonMin = gd.layout.xaxis.range[0];
+                const lonMax = gd.layout.xaxis.range[1];
+                const latMin = gd.layout.yaxis.range[0];
+                const latMax = gd.layout.yaxis.range[1];
+                
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    const vel = getVelocityAt(p.lon, p.lat);
+                    
+                    if (!vel) {
+                        p.reset(lonMin, lonMax, latMin, latMax);
+                        continue;
+                    }
+                    
+                    // Update particle simulation position
+                    const speedMultiplier = 0.8; 
+                    p.lon += vel.u * speedMultiplier * 0.03;
+                    p.lat += vel.v * speedMultiplier * 0.03;
+                    p.age += 1;
+                    
+                    const px = ((p.lon - lonMin) / (lonMax - lonMin)) * rect.width;
+                    const py = (1 - (p.lat - latMin) / (latMax - latMin)) * rect.height;
+                    
+                    if (p.age > p.maxAge || p.lon < lonMin || p.lon > lonMax || p.lat < latMin || p.lat > latMax) {
+                        p.reset(lonMin, lonMax, latMin, latMax);
+                        continue;
+                    }
+                    
+                    if (p.history.length > 0) {
+                        const last = p.history[p.history.length - 1];
+                        const speed = Math.sqrt(vel.u*vel.u + vel.v*vel.v);
+                        const speedPct = Math.min(speed / 0.8, 1.0);
+                        
+                        // Draw the foreground bright neon glowing core (no black shadow outline)
+                        ctx.beginPath();
+                        ctx.moveTo(last.x, last.y);
+                        ctx.lineTo(px, py);
+                        ctx.strokeStyle = `rgba(${Math.floor(150 - 100 * speedPct)}, 250, 255, ${0.85 + 0.15 * speedPct})`;
+                        ctx.lineWidth = 1.8;
+                        ctx.stroke();
+                    }
+                    
+                    p.history.push({ x: px, y: py });
+                    if (p.history.length > 4) {
+                        p.history.shift();
+                    }
+                }
+                
+                particleAnimationId = requestAnimationFrame(step);
+            }
+            
+            particleAnimationId = requestAnimationFrame(step);
+        }
+
+        function stopParticleAnimation() {
+            if (particleAnimationId) {
+                cancelAnimationFrame(particleAnimationId);
+                particleAnimationId = null;
+            }
+            const canvas = document.getElementById('particle-canvas');
+            if (canvas) {
+                canvas.style.display = 'none';
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // Dynamic small loading indicator text utility
+        function showLoading(visible) {
+            const el = document.getElementById('loading-text');
+            if (el) {
+                if (visible) {
+                    el.classList.remove('opacity-0');
+                } else {
+                    el.classList.add('opacity-0');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
