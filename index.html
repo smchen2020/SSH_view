@@ -259,38 +259,62 @@
                     </div>
                 </div>
 
-                <!-- Main Plot Workspace (Horizontal Split) -->
-                <div class="flex-1 flex flex-col md:flex-row gap-4 min-h-0 w-full overflow-hidden">
+                <!-- Main Plot Workspace (Vertical Stack of Horizontal Rows) -->
+                <div class="flex-1 flex flex-col gap-4 min-h-0 w-full overflow-y-auto pr-1">
                     
-                    <!-- Left: SLA Map Container -->
-                    <div class="flex-1 h-full flex flex-col gap-2 min-w-0 bg-[#0f172a]/20 border border-slate-800/50 p-3 rounded-2xl relative">
-                        <div class="flex justify-between items-center px-1">
-                            <span class="text-xs font-bold text-blue-400 flex items-center gap-1.5">
-                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Sea Level Anomaly (SLA)
-                            </span>
-                            <span class="text-[9px] font-semibold font-mono text-slate-400" id="stats-sla">Min: -- | Max: -- | Mean: -- | Std: --</span>
+                    <!-- Top Row: SLA and ADT Maps -->
+                    <div class="flex-[5] flex flex-col md:flex-row gap-4 min-h-[380px]">
+                        <!-- Left: SLA Map Container -->
+                        <div class="flex-1 h-full flex flex-col gap-2 min-w-0 bg-[#0f172a]/20 border border-slate-800/50 p-3 rounded-2xl relative">
+                            <div class="flex justify-between items-center px-1">
+                                <span class="text-xs font-bold text-blue-400 flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Sea Level Anomaly (SLA)
+                                </span>
+                                <span class="text-[9px] font-semibold font-mono text-slate-400" id="stats-sla">Min: -- | Max: -- | Mean: -- | Std: --</span>
+                            </div>
+                            <div class="flex-1 h-full rounded-xl overflow-hidden relative" id="plot-wrapper-sla">
+                                <!-- Plotly target SLA -->
+                                <div id="plotly-chart-sla" class="w-full h-full"></div>
+                                <!-- Transparent Canvas for Particle flow overlay SLA -->
+                                <canvas id="particle-canvas-sla" class="absolute pointer-events-none rounded-xl z-10" style="top: 0; left: 0; display: none; z-index: 10;"></canvas>
+                            </div>
                         </div>
-                        <div class="flex-1 h-full rounded-xl overflow-hidden relative" id="plot-wrapper-sla">
-                            <!-- Plotly target SLA -->
-                            <div id="plotly-chart-sla" class="w-full h-full"></div>
-                            <!-- Transparent Canvas for Particle flow overlay SLA -->
-                            <canvas id="particle-canvas-sla" class="absolute pointer-events-none rounded-xl z-10" style="top: 0; left: 0; display: none; z-index: 10;"></canvas>
+
+                        <!-- Right: ADT Map Container -->
+                        <div class="flex-1 h-full flex flex-col gap-2 min-w-0 bg-[#0f172a]/20 border border-slate-800/50 p-3 rounded-2xl relative">
+                            <div class="flex justify-between items-center px-1">
+                                <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Absolute Dynamic Topography (ADT)
+                                </span>
+                                <span class="text-[9px] font-semibold font-mono text-slate-400" id="stats-adt">Min: -- | Max: -- | Mean: -- | Std: --</span>
+                            </div>
+                            <div class="flex-1 h-full rounded-xl overflow-hidden relative" id="plot-wrapper-adt">
+                                <!-- Plotly target ADT -->
+                                <div id="plotly-chart-adt" class="w-full h-full"></div>
+                                <!-- Transparent Canvas for Particle flow overlay ADT -->
+                                <canvas id="particle-canvas-adt" class="absolute pointer-events-none rounded-xl z-10" style="top: 0; left: 0; display: none; z-index: 10;"></canvas>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Right: ADT Map Container -->
-                    <div class="flex-1 h-full flex flex-col gap-2 min-w-0 bg-[#0f172a]/20 border border-slate-800/50 p-3 rounded-2xl relative">
-                        <div class="flex justify-between items-center px-1">
-                            <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Absolute Dynamic Topography (ADT)
-                            </span>
-                            <span class="text-[9px] font-semibold font-mono text-slate-400" id="stats-adt">Min: -- | Max: -- | Mean: -- | Std: --</span>
+                    <!-- Bottom Row: Mooring Time-Depth Series (CKM1, CKM6, CKM3) -->
+                    <div class="flex-[4] flex flex-col md:flex-row gap-4 min-h-[280px]">
+                        <!-- CKM1 Mooring plot -->
+                        <div class="flex-1 h-full flex flex-col gap-1 bg-[#0f172a]/20 border border-slate-800/50 p-2 rounded-2xl relative">
+                            <span class="text-[11px] font-bold text-cyan-400 px-1">CKM1 Mooring V-Velocity</span>
+                            <div id="plotly-mooring-ckm1" class="w-full flex-1 min-h-0"></div>
                         </div>
-                        <div class="flex-1 h-full rounded-xl overflow-hidden relative" id="plot-wrapper-adt">
-                            <!-- Plotly target ADT -->
-                            <div id="plotly-chart-adt" class="w-full h-full"></div>
-                            <!-- Transparent Canvas for Particle flow overlay ADT -->
-                            <canvas id="particle-canvas-adt" class="absolute pointer-events-none rounded-xl z-10" style="top: 0; left: 0; display: none; z-index: 10;"></canvas>
+
+                        <!-- CKM6 Mooring plot -->
+                        <div class="flex-1 h-full flex flex-col gap-1 bg-[#0f172a]/20 border border-slate-800/50 p-2 rounded-2xl relative">
+                            <span class="text-[11px] font-bold text-cyan-400 px-1">CKM6 Mooring V-Velocity</span>
+                            <div id="plotly-mooring-ckm6" class="w-full flex-1 min-h-0"></div>
+                        </div>
+
+                        <!-- CKM3 Mooring plot -->
+                        <div class="flex-1 h-full flex flex-col gap-1 bg-[#0f172a]/20 border border-slate-800/50 p-2 rounded-2xl relative">
+                            <span class="text-[11px] font-bold text-cyan-400 px-1">CKM3 Mooring V-Velocity</span>
+                            <div id="plotly-mooring-ckm3" class="w-full flex-1 min-h-0"></div>
                         </div>
                     </div>
 
@@ -343,6 +367,7 @@
         window.addEventListener('DOMContentLoaded', async () => {
             await fetchInitMetadata();
             await fetchSlice();
+            await fetchMooringData();
             
             // Explicitly prevent any mouse wheel scroll inside the charts and synchronize pan/zoom
             const chartSla = document.getElementById('plotly-chart-sla');
@@ -523,6 +548,9 @@
                 
                 currentSlaData = dataSla;
                 currentAdtData = dataAdt;
+                
+                // Synchronize the vertical date indicator line on time-depth plots
+                updateMooringIndicator(dataSla.date);
                 
                 if (showCurrent && currentsStyle === 'particles') {
                     setTimeout(startParticleAnimation, 150);
@@ -1151,6 +1179,124 @@
                     canvas.style.display = 'none';
                     const ctx = canvas.getContext('2d');
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            });
+        }
+
+        let mooringData = null;
+
+        // Fetch mooring time-depth profiles once
+        async function fetchMooringData() {
+            try {
+                const res = await fetch('/api/mooring');
+                if (!res.ok) throw new Error("Mooring data fetch failed");
+                mooringData = await res.json();
+                
+                renderMooringPlot('ckm1', 'plotly-mooring-ckm1');
+                renderMooringPlot('ckm6', 'plotly-mooring-ckm6');
+                renderMooringPlot('ckm3', 'plotly-mooring-ckm3');
+            } catch (err) {
+                console.error("Mooring data load error:", err);
+            }
+        }
+
+        // Render time-depth contour profile for a mooring station
+        function renderMooringPlot(key, divId) {
+            const data = mooringData[key];
+            if (!data) return;
+
+            const trace = {
+                x: data.t,
+                y: data.deps,
+                z: data.v,
+                type: 'contour',
+                colorscale: 'RdBu',
+                reversescale: true,
+                zmin: -0.7,
+                zmax: 0.7,
+                contours: {
+                    start: -0.7,
+                    end: 0.7,
+                    size: 0.1,
+                    showlines: true
+                },
+                colorbar: {
+                    title: {
+                        text: 'V (m/s)',
+                        font: { color: '#94a3b8', size: 10, family: 'Outfit' }
+                    },
+                    tickfont: { color: '#94a3b8', size: 9, family: 'Outfit' },
+                    thickness: 12,
+                    len: 0.85
+                },
+                hoverinfo: 'x+y+z',
+                hovertemplate: '<b>Date</b>: %{x}<br><b>Depth</b>: %{y:.1f} m<br><b>V</b>: %{z:.3f} m/s<extra></extra>'
+            };
+
+            const currentDate = (dates && dates[currentIndex]) ? dates[currentIndex] : data.t[0];
+
+            const layout = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: '#0f172a',
+                margin: { l: 45, r: 10, t: 15, b: 35 },
+                xaxis: {
+                    type: 'date',
+                    tickfont: { color: '#94a3b8', family: 'Outfit', size: 9 },
+                    gridcolor: '#1e293b',
+                    linecolor: '#334155'
+                },
+                yaxis: {
+                    range: [-600, 0],
+                    tickfont: { color: '#94a3b8', family: 'Outfit', size: 9 },
+                    gridcolor: '#1e293b',
+                    linecolor: '#334155',
+                    title: { text: 'Depth (m)', font: { color: '#94a3b8', size: 10 } }
+                },
+                showlegend: false,
+                autosize: true,
+                shapes: [{
+                    type: 'line',
+                    x0: currentDate,
+                    x1: currentDate,
+                    y0: 0,
+                    y1: -600,
+                    line: {
+                        color: '#facc15',
+                        width: 2.0,
+                        dash: 'dashdot'
+                    }
+                }]
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            Plotly.newPlot(divId, [trace], layout, config);
+        }
+
+        // Fast update of the vertical indicators via relayout
+        function updateMooringIndicator(dateStr) {
+            const mooringCharts = ['plotly-mooring-ckm1', 'plotly-mooring-ckm6', 'plotly-mooring-ckm3'];
+            mooringCharts.forEach(id => {
+                const gd = document.getElementById(id);
+                if (gd && gd.layout) {
+                    const update = {
+                        shapes: [{
+                            type: 'line',
+                            x0: dateStr,
+                            x1: dateStr,
+                            y0: 0,
+                            y1: -600,
+                            line: {
+                                color: '#facc15',
+                                width: 2.0,
+                                dash: 'dashdot'
+                            }
+                        }]
+                    };
+                    Plotly.relayout(gd, update);
                 }
             });
         }
